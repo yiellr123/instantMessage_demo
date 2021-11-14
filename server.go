@@ -45,14 +45,14 @@ func (s *Server) ListenMessager() {
 func (s *Server) Handler(conn net.Conn) {
 	//当前连接业务
 	// fmt.Println("连接建立成功")
-	user := NewUser(conn)
+	user := NewUser(conn, s)
 	//用户上线,将用户加入到onlinemap中
-	s.mapLock.Lock()
-	s.OnLineMap[user.Name] = user
-	s.mapLock.Unlock()
-	//广播当前用户上线消息
-	s.BroadCast(user, "已上线")
-	//当前handler阻塞  user是指针类型的, 这里的user没有了, map里面的user也会跟着没有?????
+	/* 	s.mapLock.Lock()
+	   	s.OnLineMap[user.Name] = user
+	   	s.mapLock.Unlock()
+	   	//广播当前用户上线消息
+	   	s.BroadCast(user, "已上线") */
+	user.OnLine()
 
 	//接收客户端发送的消息
 	go func() {
@@ -60,7 +60,7 @@ func (s *Server) Handler(conn net.Conn) {
 		for {
 			n, err := conn.Read(buf)
 			if n == 0 {
-				s.BroadCast(user, "下线") //关闭连接时,下线
+				user.OffLine()
 				return
 			}
 			if err != nil && err != io.EOF { //没有读到末尾
@@ -68,11 +68,15 @@ func (s *Server) Handler(conn net.Conn) {
 			}
 			//提取用户的消息,去除'\n'
 			msg := string(buf[:n-1])
+
+			//用户针对msg进行消息处理
+			user.DoMessage(msg)
+
 			//将得到的消息进行广播
-			s.BroadCast(user, msg)
+			// s.BroadCast(user, msg)
 		}
 	}()
-
+	//当前handler阻塞  user是指针类型的, 这里的user没有了, map里面的user也会跟着没有?????
 	select {}
 }
 
