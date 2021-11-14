@@ -52,7 +52,25 @@ func (u *User) OffLine() {
 	u.server.BroadCast(u, "下线")
 }
 
+func (u *User) sendMsg(msg string) {
+	u.conn.Write([]byte(msg))
+}
+
 // DoMessage 用户处理消息的业务
 func (u *User) DoMessage(msg string) {
-	u.server.BroadCast(u, msg)
+	if msg == "who" {
+		// 查询当前在线用户有哪些
+		u.server.mapLock.Lock()
+		for _, user := range u.server.OnLineMap {
+			onlineMsg := "[" + user.Addr + "]" + user.Name + ":" + "在线..\n"
+			// 不能使用此广播方式,只通过当前的conn来发送给当前用户
+			// u.server.BroadCast(u, onlineMsg)
+
+			u.sendMsg(onlineMsg)
+		}
+		u.server.mapLock.Unlock()
+
+	} else {
+		u.server.BroadCast(u, msg)
+	}
 }
