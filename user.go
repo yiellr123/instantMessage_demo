@@ -88,6 +88,29 @@ func (u *User) DoMessage(msg string) {
 			u.Name = newName
 			u.sendMsg("您已更新用户名:" + u.Name + "\n")
 		}
+	} else if len(msg) > 4 && msg[:3] == "to|" {
+		//消息格式: to|张三|消息内容
+
+		//1.获取对方的用户名
+		remoteName := strings.Split(msg, "|")[1]
+		if remoteName == "" {
+			u.sendMsg("消息格式不正确,请使用\"to|张三|你好啊\"格式.\n")
+			return
+		}
+		//2.根据用户名,得到对方user对象
+		remoteUser, ok := u.server.OnLineMap[remoteName]
+		if !ok {
+			u.sendMsg("该用户名不存在\n")
+			return
+		}
+
+		//3.获取消息内容,通过对方的user对象将消息内容发送过去
+		content := strings.Split(msg, "|")[2]
+		if content == "" {
+			u.sendMsg("无消息内容,请重发\n")
+			return
+		}
+		remoteUser.sendMsg(u.Name + "对您说:" + content)
 	} else {
 		u.server.BroadCast(u, msg)
 	}
