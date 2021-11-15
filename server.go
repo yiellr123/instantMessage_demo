@@ -96,7 +96,7 @@ func (s *Server) Handler(conn net.Conn) {
 			//销毁资源
 			close(user.C)
 			//关闭连接
-			conn.Close()
+			conn.Close() //此处关闭连接,上方go协程的read方法失效,触发offline方法
 			//退出当前handler
 			return
 		}
