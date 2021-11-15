@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 )
 
 type Server struct {
@@ -54,6 +55,9 @@ func (s *Server) Handler(conn net.Conn) {
 	   	s.BroadCast(user, "已上线") */
 	user.OnLine()
 
+	//监听用户是否活跃的channel
+	isLive := make(chan bool)
+
 	//接收客户端发送的消息
 	go func() {
 		buf := make([]byte, 4096)
@@ -72,12 +76,31 @@ func (s *Server) Handler(conn net.Conn) {
 			//用户针对msg进行消息处理
 			user.DoMessage(msg)
 
+			//用户的任意消息,代表当前用户活跃
+			isLive <- true
 			//将得到的消息进行广播
 			// s.BroadCast(user, msg)
 		}
 	}()
+
 	//当前handler阻塞  user是指针类型的, 这里的user没有了, map里面的user也会跟着没有?????
-	select {}
+	for {
+		select {
+		case <-isLive:
+			//当前用户是活跃的,应该充值定时器
+			//不做任何事情,为了激活select,更新下面的定时器
+		case <-time.After(time.Second * 15):
+			//已经超时
+			//将当前的user强制关闭
+			user.sendMsg("你被踢了")
+			//销毁资源
+			close(user.C)
+			//关闭连接
+			conn.Close()
+			//退出当前handler
+			return
+		}
+	}
 }
 
 func (s *Server) Start() {
